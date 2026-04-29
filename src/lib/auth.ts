@@ -1,12 +1,13 @@
 import { SignJWT, jwtVerify } from "jose";
+import { getCloudflareVar } from "./cloudflare";
 
 export const SESSION_COOKIE = "memory_session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
 
 function getSecret(): Uint8Array {
   const secret =
-    process.env.SESSION_SECRET ||
-    process.env.APP_PASSWORD ||
+    getCloudflareVar("SESSION_SECRET") ||
+    getCloudflareVar("APP_PASSWORD") ||
     "memory-dev-secret-change-me";
   return new TextEncoder().encode(secret);
 }
@@ -31,7 +32,7 @@ export async function verifySessionToken(token: string): Promise<boolean> {
 }
 
 export function getAppPassword(): string {
-  const password = process.env.APP_PASSWORD;
+  const password = getCloudflareVar("APP_PASSWORD");
   if (!password) {
     throw new Error("APP_PASSWORD 未配置");
   }

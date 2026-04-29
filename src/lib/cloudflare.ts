@@ -27,10 +27,52 @@ export function setCloudflareEnv(env: EnvLike | undefined): void {
   globalThis.__cloudflareEnv = env;
 }
 
+function tryGetOpenNextEnv(): EnvLike | undefined {
+  try {
+    const g = globalThis as unknown as {
+      __OPENNEXT_CLOUDFLARE_CONTEXT__?: { env?: EnvLike };
+    };
+    return g.__OPENNEXT_CLOUDFLARE_CONTEXT__?.env;
+  } catch {
+    return undefined;
+  }
+}
+
+function tryGetNextOnPagesEnv(): EnvLike | undefined {
+  try {
+    const g = globalThis as unknown as {
+      process?: { env?: Record<string, unknown> };
+    };
+    const cfEnv = g.process?.env as EnvLike | undefined;
+    return cfEnv;
+  } catch {
+    return undefined;
+  }
+}
+
+function resolveEnv(): EnvLike | undefined {
+  return getGlobalEnv() ?? tryGetOpenNextEnv() ?? tryGetNextOnPagesEnv();
+}
+
 export function getCloudflareKvBinding(): KvBinding | null {
-  return getGlobalEnv()?.SOUVENIR_KV ?? null;
+  const env = resolveEnv();
+  const binding = env?.SOUVENIR_KV as KvBinding | undefined;
+  return binding ?? null;
 }
 
 export function getCloudflareR2Binding(): R2Binding | null {
-  return getGlobalEnv()?.SOUVENIR_R2 ?? null;
+  const env = resolveEnv();
+  const binding = env?.SOUVENIR_R2 as R2Binding | undefined;
+  return binding ?? null;
+}
+
+export function getCloudflareVar(name: string): string | undefined {
+  const env = resolveEnv();
+  const value = env?.[name];
+  if (typeof value === "string" && value.length > 0) return value;
+  const fromProcess = process.env?.[name];
+  if (typeof fromProcess === "string" && fromProcess.length > 0) {
+    return fromProcess;
+  }
+  return undefined;
 }
