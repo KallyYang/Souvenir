@@ -14,13 +14,13 @@
   "kv_namespaces": [
     {
       "binding": "SOUVENIR_KV",
-      "id": "<REPLACE_WITH_YOUR_KV_NAMESPACE_ID>"
+      "id": "c6af710169d9418ba5d828aa33c67b1e"
     }
   ],
   "r2_buckets": [
     {
       "binding": "SOUVENIR_R2",
-      "bucket_name": "<REPLACE_WITH_YOUR_ASSETS_BUCKET>"
+      "bucket_name": "memory"
     }
   ]
 }
