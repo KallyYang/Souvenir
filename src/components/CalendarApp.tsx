@@ -234,7 +234,7 @@ function DayImage({
     <>
       {!loaded ? (
         <div
-          className="absolute inset-0 animate-pulse bg-gradient-to-br from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-800 dark:via-neutral-700 dark:to-neutral-800"
+          className="skeleton-shimmer absolute inset-0"
           aria-hidden
         />
       ) : null}

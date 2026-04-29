@@ -18,7 +18,7 @@
 - TypeScript 5
 - Tailwind CSS 4
 - `jose`（JWT 会话）
-- `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`（生成 R2 预签名 URL）
+- `aws4fetch`（在 Cloudflare Workers 上为 R2 生成 S3 兼容预签名 URL）
 - Cloudflare R2（图片对象存储）
 - Cloudflare KV（元数据存储，通过原生 binding 访问）
 - `@opennextjs/cloudflare` + `wrangler`（构建并部署到 Cloudflare Workers）

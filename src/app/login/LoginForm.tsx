@@ -52,7 +52,7 @@ export default function LoginForm({ redirectTo }: { redirectTo: string }) {
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="block w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-base shadow-sm outline-none transition focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10 dark:border-neutral-700 dark:bg-neutral-900 dark:focus:border-neutral-100 dark:focus:ring-neutral-100/10"
+          className="block w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-base tracking-[0.25em] shadow-sm outline-none transition focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10 dark:border-neutral-700 dark:bg-neutral-900 dark:focus:border-neutral-100 dark:focus:ring-neutral-100/10"
           required
           autoFocus
         />

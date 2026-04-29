@@ -46,3 +46,38 @@ body {
 * {
   -webkit-tap-highlight-color: transparent;
 }
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background-image: linear-gradient(
+    110deg,
+    rgba(229, 229, 229, 1) 0%,
+    rgba(229, 229, 229, 1) 30%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(229, 229, 229, 1) 70%,
+    rgba(229, 229, 229, 1) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@media (prefers-color-scheme: dark) {
+  .skeleton-shimmer {
+    background-image: linear-gradient(
+      110deg,
+      rgba(38, 38, 38, 1) 0%,
+      rgba(38, 38, 38, 1) 30%,
+      rgba(115, 115, 115, 0.9) 50%,
+      rgba(38, 38, 38, 1) 70%,
+      rgba(38, 38, 38, 1) 100%
+    );
+  }
+}

@@ -29,10 +29,6 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: patterns,
   },
-  serverExternalPackages: [
-    "@aws-sdk/client-s3",
-    "@aws-sdk/s3-request-presigner",
-  ],
 };
 
 export default nextConfig;
