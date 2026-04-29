@@ -1,3 +1,5 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+
 type KvBinding = {
   get: (key: string) => Promise<string | null>;
   put: (key: string, value: string) => Promise<void>;
@@ -29,29 +31,15 @@ export function setCloudflareEnv(env: EnvLike | undefined): void {
 
 function tryGetOpenNextEnv(): EnvLike | undefined {
   try {
-    const g = globalThis as unknown as {
-      __OPENNEXT_CLOUDFLARE_CONTEXT__?: { env?: EnvLike };
-    };
-    return g.__OPENNEXT_CLOUDFLARE_CONTEXT__?.env;
-  } catch {
-    return undefined;
-  }
-}
-
-function tryGetNextOnPagesEnv(): EnvLike | undefined {
-  try {
-    const g = globalThis as unknown as {
-      process?: { env?: Record<string, unknown> };
-    };
-    const cfEnv = g.process?.env as EnvLike | undefined;
-    return cfEnv;
+    const ctx = getCloudflareContext();
+    return ctx?.env as EnvLike | undefined;
   } catch {
     return undefined;
   }
 }
 
 function resolveEnv(): EnvLike | undefined {
-  return getGlobalEnv() ?? tryGetOpenNextEnv() ?? tryGetNextOnPagesEnv();
+  return getGlobalEnv() ?? tryGetOpenNextEnv();
 }
 
 export function getCloudflareKvBinding(): KvBinding | null {
