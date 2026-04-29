@@ -141,8 +141,9 @@ export default function DayDetail({ date, entry, onChange }: Props) {
 
   function applyCropMode(mode: CropMode, width: number, height: number) {
     const selectedMode = CROP_MODES.find((item) => item.value === mode);
-    const nextCrop = selectedMode?.aspect
-      ? getCenteredAspectCrop(width, height, selectedMode.aspect)
+    const aspect = selectedMode && "aspect" in selectedMode ? selectedMode.aspect : undefined;
+    const nextCrop = aspect
+      ? getCenteredAspectCrop(width, height, aspect)
       : getDefaultFreeCrop();
 
     setCropMode(mode);
@@ -514,7 +515,10 @@ export default function DayDetail({ date, entry, onChange }: Props) {
                       crop={crop}
                       onChange={(nextCrop) => setCrop(nextCrop)}
                       onComplete={(pixelCrop) => setCompletedCrop(pixelCrop)}
-                      aspect={CROP_MODES.find((mode) => mode.value === cropMode)?.aspect}
+                      aspect={(() => {
+                        const mode = CROP_MODES.find((item) => item.value === cropMode);
+                        return mode && "aspect" in mode ? mode.aspect : undefined;
+                      })()}
                       minWidth={MIN_CROP_SIZE}
                       minHeight={MIN_CROP_SIZE}
                       keepSelection
