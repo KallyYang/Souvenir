@@ -54,7 +54,7 @@ src/
 │   ├── kv.ts
 │   ├── memories.ts
 │   └── r2.ts
-└── proxy.ts
+└── middleware.ts
 ```
 
 ## 环境变量
@@ -136,7 +136,7 @@ npm run dev
 
 ## 说明
 
-- 所有 API 路由由 `src/proxy.ts` 保护
+- 所有 API 路由由 `src/middleware.ts` 保护
 - 会话是 HttpOnly cookie + JWT，默认 30 天
 - 图片上传后在 R2 中按 `年份/月份/文件名` 存储
 - 元数据使用单一 key `memories:index` 保存在 Cloudflare KV 中
