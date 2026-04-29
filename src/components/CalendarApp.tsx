@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   addMonths,
@@ -27,6 +27,7 @@ export default function CalendarApp() {
   const [entries, setEntries] = useState<EntriesMap>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
 
   const cells = useMemo(() => buildMonthGrid(monthAnchor), [monthAnchor]);
 
@@ -78,7 +79,7 @@ export default function CalendarApp() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-            回忆日历
+            Souvenir
           </h1>
           <p className="mt-1 text-xs text-neutral-500 sm:text-sm">
             每一天，一张图片，一段故事
@@ -144,22 +145,23 @@ export default function CalendarApp() {
                   ].join(" ")}
                 >
                   {entry?.imageUrl ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={entry.imageUrl}
-                        alt=""
-                        className="absolute inset-0 h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                    </>
+                    <DayImage
+                      src={entry.imageUrl}
+                      loaded={!!loadedImages[key]}
+                      onLoaded={() =>
+                        setLoadedImages((prev) =>
+                          prev[key] ? prev : { ...prev, [key]: true },
+                        )
+                      }
+                    />
                   ) : null}
                   <span
                     className={[
-                      "absolute left-1 top-1 text-[11px] font-semibold leading-none sm:left-1.5 sm:top-1.5 sm:text-sm",
+                      "absolute left-1 top-1 z-10 text-[11px] font-semibold leading-none sm:left-1.5 sm:top-1.5 sm:text-sm",
                       entry?.imageUrl
-                        ? "text-white drop-shadow"
+                        ? loadedImages[key]
+                          ? "text-white drop-shadow"
+                          : "text-neutral-700 dark:text-neutral-200"
                         : isToday
                           ? "text-orange-500"
                           : "text-neutral-700 dark:text-neutral-200",
@@ -168,7 +170,7 @@ export default function CalendarApp() {
                     {d.getDate()}
                   </span>
                   {isToday && !isSelected ? (
-                    <span className="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-orange-500 sm:h-2 sm:w-2" />
+                    <span className="absolute bottom-1 right-1 z-10 h-1.5 w-1.5 rounded-full bg-orange-500 sm:h-2 sm:w-2" />
                   ) : null}
                 </button>
               );
@@ -206,5 +208,52 @@ export default function CalendarApp() {
         </section>
       </div>
     </div>
+  );
+}
+
+function DayImage({
+  src,
+  loaded,
+  onLoaded,
+}: {
+  src: string;
+  loaded: boolean;
+  onLoaded: () => void;
+}) {
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (loaded) return;
+    const el = imgRef.current;
+    if (el && el.complete && el.naturalWidth > 0) {
+      onLoaded();
+    }
+  }, [loaded, onLoaded, src]);
+
+  return (
+    <>
+      {!loaded ? (
+        <div
+          className="absolute inset-0 animate-pulse bg-gradient-to-br from-neutral-200 via-neutral-100 to-neutral-200 dark:from-neutral-800 dark:via-neutral-700 dark:to-neutral-800"
+          aria-hidden
+        />
+      ) : null}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={imgRef}
+        src={src}
+        alt=""
+        className={[
+          "absolute inset-0 h-full w-full object-cover transition-opacity duration-300",
+          loaded ? "opacity-100" : "opacity-0",
+        ].join(" ")}
+        loading="lazy"
+        onLoad={onLoaded}
+        onError={onLoaded}
+      />
+      {loaded ? (
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+      ) : null}
+    </>
   );
 }

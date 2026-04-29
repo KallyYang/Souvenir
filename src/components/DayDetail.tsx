@@ -1,12 +1,56 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import ReactCrop, {
+  centerCrop,
+  makeAspectCrop,
+  type Crop,
+  type PixelCrop,
+} from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 import type { MemoryEntry } from "@/lib/memories";
+
+const CROP_MODES = [
+  { value: "free", label: "自由裁切" },
+  { value: "square", label: "1:1", aspect: 1 },
+  { value: "standard", label: "4:3", aspect: 4 / 3 },
+  { value: "widescreen", label: "16:9", aspect: 16 / 9 },
+] as const;
+
+const MIN_CROP_SIZE = 80;
+
+type CropMode = (typeof CROP_MODES)[number]["value"];
 
 interface Props {
   date: string;
   entry: MemoryEntry | null;
   onChange: (entry: MemoryEntry | null, date: string) => void;
+}
+
+function getCenteredAspectCrop(mediaWidth: number, mediaHeight: number, aspect: number): Crop {
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: "%",
+        width: 90,
+      },
+      aspect,
+      mediaWidth,
+      mediaHeight,
+    ),
+    mediaWidth,
+    mediaHeight,
+  );
+}
+
+function getDefaultFreeCrop(): Crop {
+  return {
+    unit: "%",
+    x: 0,
+    y: 0,
+    width: 100,
+    height: 100,
+  };
 }
 
 export default function DayDetail({ date, entry, onChange }: Props) {
@@ -16,18 +60,157 @@ export default function DayDetail({ date, entry, onChange }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
+  const [cropMode, setCropMode] = useState<CropMode>("free");
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
+  const [cropViewport, setCropViewport] = useState<{ width: number; height: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cropImageRef = useRef<HTMLImageElement | null>(null);
+  const cropContainerRef = useRef<HTMLDivElement | null>(null);
 
-  async function handlePickFile(file: File) {
-    if (!file) return;
+  useEffect(() => {
+    setNote(entry?.note || "");
+  }, [entry?.note]);
+
+  useLayoutEffect(() => {
+    if (!cropOpen) {
+      setCropViewport(null);
+      return;
+    }
+
+    const element = cropContainerRef.current;
+    if (!element) return;
+
+    const updateSize = () => {
+      const rect = element.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        setCropViewport({ width: rect.width, height: rect.height });
+      }
+    };
+
+    updateSize();
+
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(element);
+    window.addEventListener("resize", updateSize);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateSize);
+    };
+  }, [cropOpen]);
+
+  function resetCropState() {
+    setCropMode("free");
+    setCrop(undefined);
+    setCompletedCrop(undefined);
+    setImageSize(null);
+    cropImageRef.current = null;
+  }
+
+  function openCropper(file: File) {
     setError(null);
     setInfo(null);
 
-    const MAX = 10 * 1024 * 1024;
+    const MAX = 50 * 1024 * 1024;
     if (file.size > MAX) {
-      setError("图片大小不能超过 10MB");
+      setError("图片大小不能超过 50MB");
       return;
     }
+
+    const objectUrl = URL.createObjectURL(file);
+    setSourceFile(file);
+    setCropImageUrl(objectUrl);
+    resetCropState();
+    setCropOpen(true);
+  }
+
+  function closeCropper() {
+    if (cropImageUrl) {
+      URL.revokeObjectURL(cropImageUrl);
+    }
+    setCropOpen(false);
+    setSourceFile(null);
+    setCropImageUrl(null);
+    resetCropState();
+  }
+
+  function applyCropMode(mode: CropMode, width: number, height: number) {
+    const selectedMode = CROP_MODES.find((item) => item.value === mode);
+    const nextCrop = selectedMode?.aspect
+      ? getCenteredAspectCrop(width, height, selectedMode.aspect)
+      : getDefaultFreeCrop();
+
+    setCropMode(mode);
+    setCrop(nextCrop);
+  }
+
+  async function createCroppedFile(): Promise<File> {
+    if (!cropImageRef.current || !completedCrop || !sourceFile) {
+      throw new Error("裁切信息不完整");
+    }
+
+    const canvas = document.createElement("canvas");
+    const scaleX = cropImageRef.current.naturalWidth / cropImageRef.current.width;
+    const scaleY = cropImageRef.current.naturalHeight / cropImageRef.current.height;
+    const pixelWidth = Math.max(1, Math.floor(completedCrop.width * scaleX));
+    const pixelHeight = Math.max(1, Math.floor(completedCrop.height * scaleY));
+    const pixelX = Math.floor(completedCrop.x * scaleX);
+    const pixelY = Math.floor(completedCrop.y * scaleY);
+
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("无法创建裁切画布");
+    }
+
+    ctx.drawImage(
+      cropImageRef.current,
+      pixelX,
+      pixelY,
+      pixelWidth,
+      pixelHeight,
+      0,
+      0,
+      pixelWidth,
+      pixelHeight,
+    );
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((result) => resolve(result), sourceFile.type || "image/png", 0.92);
+    });
+
+    if (!blob) {
+      throw new Error("裁切导出失败");
+    }
+
+    return new File([blob], sourceFile.name, {
+      type: blob.type || sourceFile.type,
+      lastModified: Date.now(),
+    });
+  }
+
+  async function handlePickFile(file: File) {
+    if (!file) return;
+    openCropper(file);
+  }
+
+  async function handleConfirmCrop() {
+    let file: File;
+    try {
+      file = await createCroppedFile();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "裁切失败");
+      return;
+    }
+
+    closeCropper();
 
     setUploading(true);
     try {
@@ -268,6 +451,121 @@ export default function DayDetail({ date, entry, onChange }: Props) {
               alt={`${date} 的回忆大图`}
               className="max-h-[88vh] w-auto max-w-full object-contain"
             />
+          </div>
+        </div>
+      ) : null}
+
+      {cropOpen && cropImageUrl ? (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm">
+          <div className="flex h-dvh flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-white">
+              <h3 className="text-sm font-medium">裁切图片</h3>
+              <button
+                type="button"
+                onClick={closeCropper}
+                className="rounded-md px-3 py-1 text-sm transition hover:bg-white/10"
+              >
+                取消
+              </button>
+            </div>
+
+            <div className="flex min-h-0 flex-1 items-stretch px-4 py-4">
+              <div className="mx-auto grid h-full max-h-full w-full max-w-7xl min-h-0 gap-4 overflow-hidden grid-rows-[auto_minmax(0,1fr)] lg:grid-cols-[16rem_minmax(0,1fr)] lg:grid-rows-1">
+                <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="text-sm font-medium text-white">裁切比例</div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {CROP_MODES.map((mode) => {
+                      const active = cropMode === mode.value;
+
+                      return (
+                        <button
+                          key={mode.value}
+                          type="button"
+                          onClick={() => {
+                            if (!imageSize) {
+                              setCropMode(mode.value);
+                              return;
+                            }
+
+                            applyCropMode(mode.value, imageSize.width, imageSize.height);
+                          }}
+                          className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                            active
+                              ? "bg-white text-neutral-900"
+                              : "bg-white/10 text-white hover:bg-white/20"
+                          }`}
+                        >
+                          {mode.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-4 text-xs leading-5 text-white/70">
+                    自由裁切模式下可以直接拖动四边和四角，自由调整宽高比例。
+                  </p>
+                </div>
+
+                <div className="flex min-w-0 min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/30 p-3">
+                  <div
+                    ref={cropContainerRef}
+                    className="relative flex h-full min-h-0 w-full flex-1 items-center justify-center overflow-hidden rounded-xl"
+                  >
+                    <ReactCrop
+                      crop={crop}
+                      onChange={(nextCrop) => setCrop(nextCrop)}
+                      onComplete={(pixelCrop) => setCompletedCrop(pixelCrop)}
+                      aspect={CROP_MODES.find((mode) => mode.value === cropMode)?.aspect}
+                      minWidth={MIN_CROP_SIZE}
+                      minHeight={MIN_CROP_SIZE}
+                      keepSelection
+                      ruleOfThirds
+                      style={
+                        cropViewport
+                          ? { maxWidth: cropViewport.width, maxHeight: cropViewport.height }
+                          : { maxWidth: "100%", maxHeight: "100%" }
+                      }
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        ref={cropImageRef}
+                        src={cropImageUrl}
+                        alt="待裁切图片"
+                        onLoad={(e) => {
+                          const { width, height } = e.currentTarget;
+                          setImageSize({ width, height });
+                          applyCropMode(cropMode, width, height);
+                        }}
+                        style={
+                          cropViewport
+                            ? {
+                                maxWidth: cropViewport.width,
+                                maxHeight: cropViewport.height,
+                                width: "auto",
+                                height: "auto",
+                              }
+                            : { maxWidth: "100%", maxHeight: "100%" }
+                        }
+                        className="block object-contain"
+                      />
+                    </ReactCrop>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 border-t border-white/10 px-4 py-4 text-white">
+              <span className="text-xs text-white/70">
+                拖动裁切框可移动，拖拽边角可调整大小；固定比例模式下会锁定比例。
+              </span>
+              <button
+                type="button"
+                onClick={handleConfirmCrop}
+                disabled={!completedCrop?.width || !completedCrop?.height}
+                className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-neutral-900 transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                使用裁切结果
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

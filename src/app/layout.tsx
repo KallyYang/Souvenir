@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "回忆日历",
+  title: "Souvenir",
   description: "用一张图片和一段文字，记录每一天的回忆",
 };
 
