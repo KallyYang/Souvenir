@@ -21,7 +21,13 @@ export default function LoginForm({ redirectTo }: { redirectTo: string }) {
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setError(data.error || "登录失败");
+      const msg = data.error || "登录失败";
+      const extra = data.debug
+        ? `\n\n[debug]\n${JSON.stringify(data.debug, null, 2)}${
+            data.detail ? `\n\n[detail]\n${data.detail}` : ""
+          }`
+        : "";
+      setError(msg + extra);
       return;
     }
 
@@ -53,9 +59,9 @@ export default function LoginForm({ redirectTo }: { redirectTo: string }) {
       </div>
 
       {error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/50 dark:text-red-400">
+        <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-950/50 dark:text-red-400">
           {error}
-        </p>
+        </pre>
       )}
 
       <button

@@ -6,6 +6,7 @@ import {
   createSessionToken,
   getAppPassword,
 } from "@/lib/auth";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export async function POST(request: Request) {
   let body: { password?: string };
@@ -22,10 +23,15 @@ export async function POST(request: Request) {
 
   let expected: string;
   try {
-    expected = getAppPassword();
-  } catch {
+    expected = await getAppPassword();
+  } catch (e) {
+    const debug = await collectEnvDebug();
     return NextResponse.json(
-      { error: "服务端未配置 APP_PASSWORD" },
+      {
+        error: "服务端未配置 APP_PASSWORD",
+        detail: String(e),
+        debug,
+      },
       { status: 500 },
     );
   }
@@ -51,4 +57,51 @@ export async function DELETE() {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
   return NextResponse.json({ ok: true });
+}
+
+async function collectEnvDebug(): Promise<Record<string, unknown>> {
+  const debug: Record<string, unknown> = {
+    nextRuntime: process.env.NEXT_RUNTIME ?? null,
+    nodeEnv: process.env.NODE_ENV ?? null,
+    processEnvHasAppPassword:
+      typeof process.env.APP_PASSWORD === "string" &&
+      process.env.APP_PASSWORD.length > 0,
+    processEnvAppPasswordLen:
+      typeof process.env.APP_PASSWORD === "string"
+        ? process.env.APP_PASSWORD.length
+        : 0,
+    processEnvKeysSample: Object.keys(process.env).slice(0, 30),
+  };
+
+  try {
+    const ctxSync = getCloudflareContext();
+    const env = (ctxSync?.env ?? {}) as Record<string, unknown>;
+    debug.syncContext = {
+      ok: true,
+      hasEnv: !!ctxSync?.env,
+      hasAppPassword:
+        typeof env.APP_PASSWORD === "string" &&
+        (env.APP_PASSWORD as string).length > 0,
+      envKeysSample: Object.keys(env).slice(0, 30),
+    };
+  } catch (err) {
+    debug.syncContext = { ok: false, error: String(err) };
+  }
+
+  try {
+    const ctxAsync = await getCloudflareContext({ async: true });
+    const env = (ctxAsync?.env ?? {}) as Record<string, unknown>;
+    debug.asyncContext = {
+      ok: true,
+      hasEnv: !!ctxAsync?.env,
+      hasAppPassword:
+        typeof env.APP_PASSWORD === "string" &&
+        (env.APP_PASSWORD as string).length > 0,
+      envKeysSample: Object.keys(env).slice(0, 30),
+    };
+  } catch (err) {
+    debug.asyncContext = { ok: false, error: String(err) };
+  }
+
+  return debug;
 }
