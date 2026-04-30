@@ -86,6 +86,7 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
   const lastSavedNoteRef = useRef<string>(entry?.note || "");
   const statusHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [statusVisible, setStatusVisible] = useState(false);
+  const [noteFocused, setNoteFocused] = useState(false);
   const IMAGE_ANIM_DURATION = 200;
   const NOTE_AUTOSAVE_DELAY = 800;
   const STATUS_HIDE_DELAY = 2000;
@@ -129,6 +130,7 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
       statusHideTimerRef.current = null;
     }
     setStatusVisible(false);
+    setNoteFocused(false);
     setError(null);
     setInfo(null);
     // 仅当切换日期时重置状态栏显示；保存成功引起的 entry.note 更新不应重置
@@ -139,7 +141,6 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
     if (!entry) return;
     if (note === lastSavedNoteRef.current) return;
 
-    setStatusVisible(true);
     if (statusHideTimerRef.current) {
       clearTimeout(statusHideTimerRef.current);
       statusHideTimerRef.current = null;
@@ -161,6 +162,28 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note, date, entry?.imageKey]);
+
+  useEffect(() => {
+    if (noteFocused) return;
+    if (saving) return;
+    if (!statusVisible) return;
+    if (noteSaveTimerRef.current) return;
+
+    if (statusHideTimerRef.current) {
+      clearTimeout(statusHideTimerRef.current);
+    }
+    statusHideTimerRef.current = setTimeout(() => {
+      statusHideTimerRef.current = null;
+      setStatusVisible(false);
+    }, STATUS_HIDE_DELAY);
+
+    return () => {
+      if (statusHideTimerRef.current) {
+        clearTimeout(statusHideTimerRef.current);
+        statusHideTimerRef.current = null;
+      }
+    };
+  }, [noteFocused, saving, statusVisible]);
 
   useLayoutEffect(() => {
     const imageBox = imageBoxRef.current;
@@ -418,14 +441,6 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
       const { entry: saved } = (await res.json()) as { entry: MemoryEntry };
       lastSavedNoteRef.current = noteValue;
       onChange(saved, date);
-      setInfo("备注已自动保存");
-      if (statusHideTimerRef.current) {
-        clearTimeout(statusHideTimerRef.current);
-      }
-      statusHideTimerRef.current = setTimeout(() => {
-        statusHideTimerRef.current = null;
-        setStatusVisible(false);
-      }, STATUS_HIDE_DELAY);
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存失败");
     } finally {
@@ -619,6 +634,17 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
             id="note"
             value={note}
             onChange={(e) => setNote(e.target.value)}
+            onFocus={() => {
+              setNoteFocused(true);
+              setStatusVisible(true);
+              if (statusHideTimerRef.current) {
+                clearTimeout(statusHideTimerRef.current);
+                statusHideTimerRef.current = null;
+              }
+            }}
+            onBlur={() => {
+              setNoteFocused(false);
+            }}
             placeholder="写下这一天值得记住的事…"
             maxLength={2000}
             rows={4}
