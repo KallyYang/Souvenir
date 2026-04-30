@@ -24,10 +24,14 @@ export default function CalendarApp() {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [selected, setSelected] = useState<Date>(today);
+  const [displayed, setDisplayed] = useState<Date>(today);
+  const [animPhase, setAnimPhase] = useState<"idle" | "exit" | "enter">("idle");
   const [entries, setEntries] = useState<EntriesMap>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cells = useMemo(() => buildMonthGrid(monthAnchor), [monthAnchor]);
 
@@ -62,8 +66,38 @@ export default function CalendarApp() {
     router.refresh();
   }
 
-  const selectedKey = toDateKey(selected);
+  const selectedKey = toDateKey(displayed);
   const selectedEntry = entries[selectedKey] || null;
+
+  const ANIM_DURATION = 180;
+
+  const handleSelectDate = useCallback(
+    (d: Date) => {
+      const nextDate = new Date(d);
+      setSelected(nextDate);
+      if (sameDay(nextDate, displayed)) return;
+
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+      if (enterTimerRef.current) clearTimeout(enterTimerRef.current);
+
+      setAnimPhase("exit");
+      exitTimerRef.current = setTimeout(() => {
+        setDisplayed(nextDate);
+        setAnimPhase("enter");
+        enterTimerRef.current = setTimeout(() => {
+          setAnimPhase("idle");
+        }, ANIM_DURATION);
+      }, ANIM_DURATION);
+    },
+    [displayed],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+      if (enterTimerRef.current) clearTimeout(enterTimerRef.current);
+    };
+  }, []);
 
   const onEntryChanged = (entry: MemoryEntry | null, date: string) => {
     setEntries((prev) => {
@@ -133,7 +167,7 @@ export default function CalendarApp() {
               return (
                 <button
                   key={key}
-                  onClick={() => setSelected(new Date(d))}
+                  onClick={() => handleSelectDate(d)}
                   className={[
                     "group relative aspect-square overflow-hidden rounded-lg border text-left transition",
                     inMonth
@@ -196,15 +230,25 @@ export default function CalendarApp() {
         </section>
 
         <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 sm:p-5 lg:w-[380px] lg:flex-shrink-0">
-          <h3 className="text-sm font-medium text-neutral-500">
-            {formatFullDate(selected)}
-          </h3>
-          <DayDetail
-            key={selectedKey}
-            date={selectedKey}
-            entry={selectedEntry}
-            onChange={onEntryChanged}
-          />
+          <div
+            className={[
+              "detail-anim",
+              animPhase === "exit" ? "detail-anim-exit" : "",
+              animPhase === "enter" ? "detail-anim-enter" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            <h3 className="text-sm font-medium text-neutral-500">
+              {formatFullDate(displayed)}
+            </h3>
+            <DayDetail
+              key={selectedKey}
+              date={selectedKey}
+              entry={selectedEntry}
+              onChange={onEntryChanged}
+            />
+          </div>
         </section>
       </div>
     </div>
