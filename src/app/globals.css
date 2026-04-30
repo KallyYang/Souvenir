@@ -154,24 +154,46 @@ body {
   }
 }
 
-@keyframes flip-old {
+@keyframes flip-old-up {
   0% {
-    transform: rotateX(0deg);
+    transform: translateY(0);
     opacity: 1;
   }
   100% {
-    transform: rotateX(-90deg);
+    transform: translateY(-0.9em);
     opacity: 0;
   }
 }
 
-@keyframes flip-new {
+@keyframes flip-new-up {
   0% {
-    transform: rotateX(90deg);
+    transform: translateY(0.9em);
     opacity: 0;
   }
   100% {
-    transform: rotateX(0deg);
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes flip-old-down {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0.9em);
+    opacity: 0;
+  }
+}
+
+@keyframes flip-new-down {
+  0% {
+    transform: translateY(-0.9em);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
     opacity: 1;
   }
 }
@@ -185,30 +207,40 @@ body {
   display: inline-block;
   position: relative;
   vertical-align: baseline;
-  perspective: 400px;
+  overflow: visible;
   white-space: pre;
 }
 
 .flip-char-old,
 .flip-char-new {
   display: inline-block;
-  transform-origin: 50% 50%;
-  backface-visibility: hidden;
-  animation-duration: 420ms;
-  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-duration: 380ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   animation-fill-mode: both;
   white-space: pre;
+  will-change: transform, opacity;
 }
 
 .flip-char-old {
   position: absolute;
   left: 0;
   top: 0;
-  animation-name: flip-old;
 }
 
-.flip-char-new {
-  animation-name: flip-new;
+.flip-char-up .flip-char-old {
+  animation-name: flip-old-up;
+}
+
+.flip-char-up .flip-char-new {
+  animation-name: flip-new-up;
+}
+
+.flip-char-down .flip-char-old {
+  animation-name: flip-old-down;
+}
+
+.flip-char-down .flip-char-new {
+  animation-name: flip-new-down;
 }
 
 @media (prefers-reduced-motion: reduce) {

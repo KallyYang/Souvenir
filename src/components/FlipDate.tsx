@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 interface Props {
   text: string;
+  direction?: "up" | "down";
   className?: string;
 }
 
@@ -12,11 +13,12 @@ interface CharSlot {
   prevChar: string;
   nextChar: string;
   animating: boolean;
+  direction: "up" | "down";
 }
 
-const FLIP_DURATION = 420;
+const FLIP_DURATION = 380;
 
-export default function FlipDate({ text, className }: Props) {
+export default function FlipDate({ text, direction = "up", className }: Props) {
   const keyCounterRef = useRef<number>(0);
   const timersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(
     new Map(),
@@ -28,6 +30,7 @@ export default function FlipDate({ text, className }: Props) {
       prevChar: ch,
       nextChar: ch,
       animating: false,
+      direction: "up",
     }));
   });
   const prevTextRef = useRef<string>(text);
@@ -52,6 +55,7 @@ export default function FlipDate({ text, className }: Props) {
             prevChar: newChar,
             nextChar: newChar,
             animating: false,
+            direction,
           });
           continue;
         }
@@ -66,11 +70,12 @@ export default function FlipDate({ text, className }: Props) {
           prevChar: oldSlot.nextChar,
           nextChar: newChar,
           animating: true,
+          direction,
         });
       }
       return result;
     });
-  }, [text]);
+  }, [text, direction]);
 
   useEffect(() => {
     slots.forEach((slot) => {
@@ -108,8 +113,10 @@ export default function FlipDate({ text, className }: Props) {
             </span>
           );
         }
+        const dirClass =
+          slot.direction === "down" ? "flip-char-down" : "flip-char-up";
         return (
-          <span key={slot.key} className="flip-char">
+          <span key={slot.key} className={`flip-char ${dirClass}`}>
             <span className="flip-char-old" aria-hidden="true">
               {slot.prevChar === " " ? "\u00a0" : slot.prevChar}
             </span>

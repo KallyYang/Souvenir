@@ -78,6 +78,10 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
   const [imagePhase, setImagePhase] = useState<"idle" | "exit" | "enter">("idle");
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const enterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const imageBoxRef = useRef<HTMLDivElement | null>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const lastImageHeightRef = useRef<number | null>(null);
+  const bottomAnimFrameRef = useRef<number | null>(null);
   const IMAGE_ANIM_DURATION = 200;
 
   useEffect(() => {
@@ -110,6 +114,55 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
     setError(null);
     setInfo(null);
   }, [date, entry?.note]);
+
+  useLayoutEffect(() => {
+    const imageBox = imageBoxRef.current;
+    const bottom = bottomRef.current;
+    if (!imageBox || !bottom) return;
+
+    const runFlip = (nextHeight: number) => {
+      const prevHeight = lastImageHeightRef.current;
+      lastImageHeightRef.current = nextHeight;
+      if (prevHeight === null) return;
+      const delta = prevHeight - nextHeight;
+      if (Math.abs(delta) < 0.5) return;
+
+      if (bottomAnimFrameRef.current !== null) {
+        cancelAnimationFrame(bottomAnimFrameRef.current);
+        bottomAnimFrameRef.current = null;
+      }
+
+      bottom.style.transition = "none";
+      bottom.style.transform = `translateY(${delta}px)`;
+
+      bottomAnimFrameRef.current = requestAnimationFrame(() => {
+        bottomAnimFrameRef.current = requestAnimationFrame(() => {
+          bottom.style.transition =
+            "transform 480ms cubic-bezier(0.22, 1, 0.36, 1)";
+          bottom.style.transform = "translateY(0)";
+        });
+      });
+    };
+
+    const initialRect = imageBox.getBoundingClientRect();
+    lastImageHeightRef.current = initialRect.height;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const e of entries) {
+        const h = e.contentRect.height;
+        runFlip(h);
+      }
+    });
+    observer.observe(imageBox);
+
+    return () => {
+      observer.disconnect();
+      if (bottomAnimFrameRef.current !== null) {
+        cancelAnimationFrame(bottomAnimFrameRef.current);
+        bottomAnimFrameRef.current = null;
+      }
+    };
+  }, []);
 
   useLayoutEffect(() => {
     if (!cropOpen) {
@@ -355,8 +408,8 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
   const noteChanged = (entry?.note || "") !== note;
 
   return (
-    <div className="mt-4 space-y-4">
-      <div>
+    <div className="mt-4">
+      <div ref={imageBoxRef}>
         <div
           className={[
             "image-anim",
@@ -403,18 +456,20 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
             </button>
           )}
         </div>
+      </div>
 
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) handlePickFile(f);
-          }}
-        />
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handlePickFile(f);
+        }}
+      />
 
+      <div ref={bottomRef} className="will-change-transform">
         {displayedEntry?.imageUrl ? (
           <div className="mt-2 flex gap-2">
             <button
@@ -435,9 +490,8 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
             </button>
           </div>
         ) : null}
-      </div>
 
-      <div>
+        <div className="mt-4">
         <label
           htmlFor="note"
           className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-300"
@@ -473,15 +527,16 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
       </div>
 
       {error ? (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-950/40 dark:text-red-400">
+        <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-950/40 dark:text-red-400">
           {error}
         </p>
       ) : null}
       {info ? (
-        <p className="rounded-lg bg-green-50 px-3 py-2 text-xs text-green-600 dark:bg-green-950/40 dark:text-green-400">
+        <p className="mt-4 rounded-lg bg-green-50 px-3 py-2 text-xs text-green-600 dark:bg-green-950/40 dark:text-green-400">
           {info}
         </p>
       ) : null}
+      </div>
 
       {previewOpen && displayedEntry?.imageUrl ? (
         <div

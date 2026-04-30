@@ -28,6 +28,7 @@ export default function CalendarApp() {
   const [imageDirection, setImageDirection] = useState<"left" | "right">(
     "left",
   );
+  const [flipDirection, setFlipDirection] = useState<"up" | "down">("up");
   const [entries, setEntries] = useState<EntriesMap>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -87,7 +88,9 @@ export default function CalendarApp() {
         nextDate.getDate(),
       ).getTime();
       selectedRef.current = nextDate;
-      setImageDirection(nextTime > prevTime ? "left" : "right");
+      const forward = nextTime > prevTime;
+      setImageDirection(forward ? "left" : "right");
+      setFlipDirection(forward ? "up" : "down");
       setSelected(nextDate);
     },
     [],
@@ -225,7 +228,10 @@ export default function CalendarApp() {
 
         <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 sm:p-5 lg:w-[380px] lg:flex-shrink-0">
           <h3 className="text-sm font-medium text-neutral-500">
-            <FlipDate text={formatFullDate(selected)} />
+            <FlipDate
+              text={formatFullDate(selected)}
+              direction={flipDirection}
+            />
           </h3>
           <DayDetail
             date={selectedKey}
