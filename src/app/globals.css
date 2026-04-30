@@ -82,29 +82,29 @@ body {
   }
 }
 
-@keyframes detail-exit-vertical {
+@keyframes image-exit-left {
   0% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
   }
   100% {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateX(-24px);
   }
 }
 
-@keyframes detail-enter-vertical {
+@keyframes image-enter-left {
   0% {
     opacity: 0;
-    transform: translateY(-16px);
+    transform: translateX(24px);
   }
   100% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
   }
 }
 
-@keyframes detail-exit-horizontal {
+@keyframes image-exit-right {
   0% {
     opacity: 1;
     transform: translateX(0);
@@ -115,7 +115,7 @@ body {
   }
 }
 
-@keyframes detail-enter-horizontal {
+@keyframes image-enter-right {
   0% {
     opacity: 0;
     transform: translateX(-24px);
@@ -126,31 +126,94 @@ body {
   }
 }
 
-.detail-anim {
-  animation-duration: 180ms;
+.image-anim {
+  animation-duration: 200ms;
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   animation-fill-mode: both;
 }
 
-.detail-anim-exit {
-  animation-name: detail-exit-vertical;
+.image-anim-exit-left {
+  animation-name: image-exit-left;
 }
 
-.detail-anim-enter {
-  animation-name: detail-enter-vertical;
+.image-anim-enter-left {
+  animation-name: image-enter-left;
 }
 
-@media (min-width: 1024px) {
-  .detail-anim-exit {
-    animation-name: detail-exit-horizontal;
-  }
-  .detail-anim-enter {
-    animation-name: detail-enter-horizontal;
-  }
+.image-anim-exit-right {
+  animation-name: image-exit-right;
+}
+
+.image-anim-enter-right {
+  animation-name: image-enter-right;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .detail-anim {
+  .image-anim {
+    animation-duration: 0ms;
+  }
+}
+
+@keyframes flip-old {
+  0% {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: rotateX(-90deg);
+    opacity: 0;
+  }
+}
+
+@keyframes flip-new {
+  0% {
+    transform: rotateX(90deg);
+    opacity: 0;
+  }
+  100% {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+}
+
+.flip-char-static {
+  display: inline-block;
+  white-space: pre;
+}
+
+.flip-char {
+  display: inline-block;
+  position: relative;
+  vertical-align: baseline;
+  perspective: 400px;
+  white-space: pre;
+}
+
+.flip-char-old,
+.flip-char-new {
+  display: inline-block;
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: both;
+  white-space: pre;
+}
+
+.flip-char-old {
+  position: absolute;
+  left: 0;
+  top: 0;
+  animation-name: flip-old;
+}
+
+.flip-char-new {
+  animation-name: flip-new;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flip-char-old,
+  .flip-char-new {
     animation-duration: 0ms;
   }
 }

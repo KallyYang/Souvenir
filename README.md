@@ -27,15 +27,15 @@
 
 ```
 Browser ──(1) 登录 cookie ─────────▶ Next.js 路由（Worker 运行时）
-        ──(2) 请求预签名 ───────────▶ /api/upload-url ──(S3 SDK)──▶ Cloudflare R2
+        ──(2) 请求预签名 ───────────▶ /api/upload-url ──(aws4fetch)──▶ Cloudflare R2
         ──(3) PUT 图片直传 ─────────▶ Cloudflare R2
         ──(4) 保存元数据 ───────────▶ /api/memories ──(SOUVENIR_KV binding)──▶ Cloudflare KV
         ──(5) 读取图片 ─────────────▶ R2 公网域名（R2_PUBLIC_BASE_URL）
 ```
 
 - **KV 读写**：首选 `SOUVENIR_KV` binding（生产）；若未检测到 binding（本地 `next dev`），回退到 Cloudflare REST API（需要 `CF_*` 环境变量）。
-- **R2 预签名上传**：始终通过 S3 SDK（因为原生 `R2Bucket` binding 不支持生成预签名 URL），生产与本地都需要 `R2_*` 凭证。
-- **R2 对象删除**：生产走 `SOUVENIR_R2` binding；本地走 S3 SDK。
+- **R2 预签名上传**：使用 `aws4fetch` 生成 S3 兼容预签名 URL（原生 `R2Bucket` binding 不支持生成预签名），生产与本地都需要 `R2_*` 凭证。
+- **R2 对象删除**：生产走 `SOUVENIR_R2` binding；本地走 `aws4fetch` 发起 S3 DELETE。
 
 ## 目录结构
 
@@ -59,7 +59,7 @@ Browser ──(1) 登录 cookie ─────────▶ Next.js 路由（
 │   │   ├── date.ts
 │   │   ├── kv.ts             # KV binding 优先，REST fallback
 │   │   ├── memories.ts       # 记忆数据模型与读写
-│   │   └── r2.ts             # R2 预签名（S3 SDK）与对象删除（binding 优先）
+│   │   └── r2.ts             # R2 预签名（aws4fetch）与对象删除（binding 优先）
 │   └── middleware.ts         # 登录保护
 ├── next.config.ts
 ├── open-next.config.ts       # OpenNext 配置；未启用 Next.js 增量缓存
@@ -79,7 +79,7 @@ npm run dev
 
 访问 http://localhost:3000，输入 `APP_PASSWORD` 登录。
 
-本地开发时，代码直接通过 `process.env` 读取 `.env.local` 里的配置，KV 走 REST API，R2 走 S3 SDK。
+本地开发时，代码直接通过 `process.env` 读取 `.env.local` 里的配置，KV 走 REST API，R2 走 `aws4fetch`。
 
 ## 环境变量
 
@@ -124,7 +124,7 @@ npm run dev
 | Binding | 类型 | 说明 |
 | --- | --- | --- |
 | `SOUVENIR_KV` | KV Namespace | 元数据读写 |
-| `SOUVENIR_R2` | R2 Bucket | 仅用于对象删除（预签名上传仍走 S3 SDK） |
+| `SOUVENIR_R2` | R2 Bucket | 仅用于对象删除（预签名上传走 `aws4fetch`） |
 | `ASSETS` | Static Assets | OpenNext 构建产物 `.open-next/assets` |
 
 > `CF_ACCOUNT_ID` / `CF_KV_NAMESPACE_ID` / `CF_API_TOKEN` 在生产**无需设置**，因为 KV 走 binding 而不会触发 REST fallback。

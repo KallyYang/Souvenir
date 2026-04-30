@@ -25,6 +25,7 @@ interface Props {
   date: string;
   entry: MemoryEntry | null;
   onChange: (entry: MemoryEntry | null, date: string) => void;
+  imageDirection?: "left" | "right";
 }
 
 function getCenteredAspectCrop(mediaWidth: number, mediaHeight: number, aspect: number): Crop {
@@ -53,7 +54,7 @@ function getDefaultFreeCrop(): Crop {
   };
 }
 
-export default function DayDetail({ date, entry, onChange }: Props) {
+export default function DayDetail({ date, entry, onChange, imageDirection = "left" }: Props) {
   const [note, setNote] = useState(entry?.note || "");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -72,9 +73,43 @@ export default function DayDetail({ date, entry, onChange }: Props) {
   const cropImageRef = useRef<HTMLImageElement | null>(null);
   const cropContainerRef = useRef<HTMLDivElement | null>(null);
 
+  const [displayedDate, setDisplayedDate] = useState(date);
+  const [displayedEntry, setDisplayedEntry] = useState<MemoryEntry | null>(entry);
+  const [imagePhase, setImagePhase] = useState<"idle" | "exit" | "enter">("idle");
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const IMAGE_ANIM_DURATION = 200;
+
+  useEffect(() => {
+    if (date === displayedDate) {
+      setDisplayedEntry(entry);
+      return;
+    }
+    if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+    if (enterTimerRef.current) clearTimeout(enterTimerRef.current);
+    setImagePhase("exit");
+    exitTimerRef.current = setTimeout(() => {
+      setDisplayedDate(date);
+      setDisplayedEntry(entry);
+      setImagePhase("enter");
+      enterTimerRef.current = setTimeout(() => {
+        setImagePhase("idle");
+      }, IMAGE_ANIM_DURATION);
+    }, IMAGE_ANIM_DURATION);
+  }, [date, entry, displayedDate]);
+
+  useEffect(() => {
+    return () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+      if (enterTimerRef.current) clearTimeout(enterTimerRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     setNote(entry?.note || "");
-  }, [entry?.note]);
+    setError(null);
+    setInfo(null);
+  }, [date, entry?.note]);
 
   useLayoutEffect(() => {
     if (!cropOpen) {
@@ -322,34 +357,52 @@ export default function DayDetail({ date, entry, onChange }: Props) {
   return (
     <div className="mt-4 space-y-4">
       <div>
-        {entry?.imageUrl ? (
-          <button
-            type="button"
-            onClick={() => setPreviewOpen(true)}
-            className="group relative block w-full overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 text-left dark:border-neutral-800 dark:bg-neutral-800"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={entry.imageUrl}
-              alt={`${date} 的回忆`}
-              className="h-auto w-full object-cover transition group-hover:scale-[1.02]"
-            />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-black/55 via-black/10 to-transparent px-3 py-3 text-white opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
-              <span className="text-xs font-medium">点击放大查看</span>
-              <span className="text-lg leading-none">↗</span>
-            </div>
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-neutral-300 bg-neutral-50 text-sm text-neutral-500 transition hover:border-orange-400 hover:text-orange-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-800/50"
-          >
-            <span className="text-2xl">＋</span>
-            <span>{uploading ? "上传中…" : "点击添加今天的图片"}</span>
-          </button>
-        )}
+        <div
+          className={[
+            "image-anim",
+            imagePhase === "exit"
+              ? imageDirection === "left"
+                ? "image-anim-exit-left"
+                : "image-anim-exit-right"
+              : "",
+            imagePhase === "enter"
+              ? imageDirection === "left"
+                ? "image-anim-enter-left"
+                : "image-anim-enter-right"
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          {displayedEntry?.imageUrl ? (
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(true)}
+              className="group relative block w-full overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 text-left dark:border-neutral-800 dark:bg-neutral-800"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={displayedEntry.imageUrl}
+                alt={`${displayedDate} 的回忆`}
+                className="h-auto w-full object-cover transition group-hover:scale-[1.02]"
+              />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-black/55 via-black/10 to-transparent px-3 py-3 text-white opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
+                <span className="text-xs font-medium">点击放大查看</span>
+                <span className="text-lg leading-none">↗</span>
+              </div>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-neutral-300 bg-neutral-50 text-sm text-neutral-500 transition hover:border-orange-400 hover:text-orange-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-800/50"
+            >
+              <span className="text-2xl">＋</span>
+              <span>{uploading ? "上传中…" : "点击添加今天的图片"}</span>
+            </button>
+          )}
+        </div>
 
         <input
           ref={fileRef}
@@ -362,7 +415,7 @@ export default function DayDetail({ date, entry, onChange }: Props) {
           }}
         />
 
-        {entry?.imageUrl ? (
+        {displayedEntry?.imageUrl ? (
           <div className="mt-2 flex gap-2">
             <button
               type="button"
@@ -430,7 +483,7 @@ export default function DayDetail({ date, entry, onChange }: Props) {
         </p>
       ) : null}
 
-      {previewOpen && entry?.imageUrl ? (
+      {previewOpen && displayedEntry?.imageUrl ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
           onClick={() => setPreviewOpen(false)}
@@ -448,8 +501,8 @@ export default function DayDetail({ date, entry, onChange }: Props) {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={entry.imageUrl}
-              alt={`${date} 的回忆大图`}
+              src={displayedEntry.imageUrl}
+              alt={`${displayedDate} 的回忆大图`}
               className="max-h-[88vh] w-auto max-w-full object-contain"
             />
           </div>
