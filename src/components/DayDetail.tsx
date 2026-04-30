@@ -82,7 +82,10 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const lastImageHeightRef = useRef<number | null>(null);
   const bottomAnimFrameRef = useRef<number | null>(null);
+  const noteSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedNoteRef = useRef<string>(entry?.note || "");
   const IMAGE_ANIM_DURATION = 200;
+  const NOTE_AUTOSAVE_DELAY = 800;
 
   useEffect(() => {
     if (date === displayedDate) {
@@ -106,14 +109,41 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
     return () => {
       if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
       if (enterTimerRef.current) clearTimeout(enterTimerRef.current);
+      if (noteSaveTimerRef.current) clearTimeout(noteSaveTimerRef.current);
     };
   }, []);
 
   useEffect(() => {
     setNote(entry?.note || "");
+    lastSavedNoteRef.current = entry?.note || "";
+    if (noteSaveTimerRef.current) {
+      clearTimeout(noteSaveTimerRef.current);
+      noteSaveTimerRef.current = null;
+    }
     setError(null);
     setInfo(null);
   }, [date, entry?.note]);
+
+  useEffect(() => {
+    if (!entry) return;
+    if (note === lastSavedNoteRef.current) return;
+
+    if (noteSaveTimerRef.current) {
+      clearTimeout(noteSaveTimerRef.current);
+    }
+    noteSaveTimerRef.current = setTimeout(() => {
+      noteSaveTimerRef.current = null;
+      void saveNote(note);
+    }, NOTE_AUTOSAVE_DELAY);
+
+    return () => {
+      if (noteSaveTimerRef.current) {
+        clearTimeout(noteSaveTimerRef.current);
+        noteSaveTimerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note, date, entry?.imageKey]);
 
   useLayoutEffect(() => {
     const imageBox = imageBoxRef.current;
@@ -353,11 +383,8 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
     }
   }
 
-  async function handleSaveNote() {
-    if (!entry) {
-      setError("请先上传一张图片");
-      return;
-    }
+  async function saveNote(noteValue: string) {
+    if (!entry) return;
     setSaving(true);
     setError(null);
     setInfo(null);
@@ -365,15 +392,16 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
       const res = await fetch("/api/memories", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, note }),
+        body: JSON.stringify({ date, note: noteValue }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "保存失败");
       }
       const { entry: saved } = (await res.json()) as { entry: MemoryEntry };
+      lastSavedNoteRef.current = noteValue;
       onChange(saved, date);
-      setInfo("备注已保存");
+      setInfo("备注已自动保存");
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存失败");
     } finally {
@@ -384,6 +412,10 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
   async function handleDelete() {
     if (!entry) return;
     if (!confirm("确定要删除这一天的回忆吗？")) return;
+    if (noteSaveTimerRef.current) {
+      clearTimeout(noteSaveTimerRef.current);
+      noteSaveTimerRef.current = null;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -397,6 +429,7 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
       }
       onChange(null, date);
       setNote("");
+      lastSavedNoteRef.current = "";
       setInfo("已删除");
     } catch (err) {
       setError(err instanceof Error ? err.message : "删除失败");
@@ -405,7 +438,7 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
     }
   }
 
-  const noteChanged = (entry?.note || "") !== note;
+  const noteDirty = !!entry && note !== (entry.note || "");
 
   return (
     <div className="mt-4">
@@ -471,22 +504,81 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
 
       <div ref={bottomRef} className="will-change-transform">
         {displayedEntry?.imageUrl ? (
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex justify-end gap-1">
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              aria-label={uploading ? "上传中" : "替换图片"}
+              title={uploading ? "上传中…" : "替换图片"}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
             >
-              {uploading ? "上传中…" : "替换图片"}
+              {uploading ? (
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="animate-spin"
+                  aria-hidden="true"
+                >
+                  <path d="M8 1.5v2" />
+                  <path d="M8 12.5v2" />
+                  <path d="M3.4 3.4l1.4 1.4" />
+                  <path d="M11.2 11.2l1.4 1.4" />
+                  <path d="M1.5 8h2" />
+                  <path d="M12.5 8h2" />
+                  <path d="M3.4 12.6l1.4-1.4" />
+                  <path d="M11.2 4.8l1.4-1.4" />
+                </svg>
+              ) : (
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 8a6 6 0 0 1-10.24 4.24" />
+                  <path d="M2 8a6 6 0 0 1 10.24-4.24" />
+                  <path d="M12.5 1.5v2.5H10" />
+                  <path d="M3.5 14.5v-2.5H6" />
+                </svg>
+              )}
             </button>
             <button
               type="button"
               onClick={handleDelete}
               disabled={saving}
-              className="flex-1 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-900 dark:bg-neutral-900 dark:text-red-400 dark:hover:bg-red-950/30"
+              aria-label="删除"
+              title="删除"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60 dark:text-neutral-400 dark:hover:bg-red-950/30 dark:hover:text-red-400"
             >
-              删除
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M2.5 4h11" />
+                <path d="M6 4V2.5h4V4" />
+                <path d="M3.5 4l.75 9.5a1 1 0 0 0 1 .9h5.5a1 1 0 0 0 1-.9L12.5 4" />
+                <path d="M6.5 7v4.5" />
+                <path d="M9.5 7v4.5" />
+              </svg>
             </button>
           </div>
         ) : null}
@@ -508,21 +600,16 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
             rows={4}
             className="block w-full resize-none rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10 dark:border-neutral-700 dark:bg-neutral-950 dark:focus:border-neutral-100 dark:focus:ring-neutral-100/10"
           />
-          {entry && noteChanged ? (
-            <button
-              type="button"
-              onClick={handleSaveNote}
-              disabled={saving}
-              className="absolute bottom-3 right-3 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-white"
-            >
-              {saving ? "保存中…" : "保存"}
-            </button>
-          ) : null}
         </div>
         <div className="mt-1 flex items-center justify-between">
           <span className="text-xs text-neutral-400">
             {note.length}/2000
           </span>
+          {entry ? (
+            <span className="text-xs text-neutral-400">
+              {saving ? "自动保存中…" : noteDirty ? "待自动保存" : "已自动保存"}
+            </span>
+          ) : null}
         </div>
       </div>
 

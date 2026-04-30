@@ -201,6 +201,7 @@ body {
 .flip-char-static {
   display: inline-block;
   white-space: pre;
+  font-variant-numeric: tabular-nums;
 }
 
 .flip-char {
@@ -209,6 +210,7 @@ body {
   vertical-align: baseline;
   overflow: visible;
   white-space: pre;
+  font-variant-numeric: tabular-nums;
 }
 
 .flip-char-old,

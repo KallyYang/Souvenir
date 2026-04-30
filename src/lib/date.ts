@@ -57,5 +57,7 @@ export function formatMonth(d: Date): string {
 
 export function formatFullDate(d: Date): string {
   const w = ["日", "一", "二", "三", "四", "五", "六"][d.getDay()];
-  return `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日 · 周${w}`;
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()} 年 ${mm} 月 ${dd} 日 · 周${w}`;
 }

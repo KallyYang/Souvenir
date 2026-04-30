@@ -231,6 +231,7 @@ export default function CalendarApp() {
             <FlipDate
               text={formatFullDate(selected)}
               direction={flipDirection}
+              className="tabular-nums"
             />
           </h3>
           <DayDetail
