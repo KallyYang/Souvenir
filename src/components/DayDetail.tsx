@@ -84,8 +84,11 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
   const bottomAnimFrameRef = useRef<number | null>(null);
   const noteSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedNoteRef = useRef<string>(entry?.note || "");
+  const statusHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [statusVisible, setStatusVisible] = useState(false);
   const IMAGE_ANIM_DURATION = 200;
   const NOTE_AUTOSAVE_DELAY = 800;
+  const STATUS_HIDE_DELAY = 2000;
 
   useEffect(() => {
     if (date === displayedDate) {
@@ -110,6 +113,7 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
       if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
       if (enterTimerRef.current) clearTimeout(enterTimerRef.current);
       if (noteSaveTimerRef.current) clearTimeout(noteSaveTimerRef.current);
+      if (statusHideTimerRef.current) clearTimeout(statusHideTimerRef.current);
     };
   }, []);
 
@@ -120,6 +124,11 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
       clearTimeout(noteSaveTimerRef.current);
       noteSaveTimerRef.current = null;
     }
+    if (statusHideTimerRef.current) {
+      clearTimeout(statusHideTimerRef.current);
+      statusHideTimerRef.current = null;
+    }
+    setStatusVisible(false);
     setError(null);
     setInfo(null);
   }, [date, entry?.note]);
@@ -127,6 +136,12 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
   useEffect(() => {
     if (!entry) return;
     if (note === lastSavedNoteRef.current) return;
+
+    setStatusVisible(true);
+    if (statusHideTimerRef.current) {
+      clearTimeout(statusHideTimerRef.current);
+      statusHideTimerRef.current = null;
+    }
 
     if (noteSaveTimerRef.current) {
       clearTimeout(noteSaveTimerRef.current);
@@ -402,6 +417,13 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
       lastSavedNoteRef.current = noteValue;
       onChange(saved, date);
       setInfo("备注已自动保存");
+      if (statusHideTimerRef.current) {
+        clearTimeout(statusHideTimerRef.current);
+      }
+      statusHideTimerRef.current = setTimeout(() => {
+        statusHideTimerRef.current = null;
+        setStatusVisible(false);
+      }, STATUS_HIDE_DELAY);
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存失败");
     } finally {
@@ -601,7 +623,14 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
             className="block w-full resize-none rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10 dark:border-neutral-700 dark:bg-neutral-950 dark:focus:border-neutral-100 dark:focus:ring-neutral-100/10"
           />
         </div>
-        <div className="mt-1 flex items-center justify-between">
+        <div
+          className={`mt-1 flex items-center justify-between overflow-hidden transition-all duration-300 ease-out ${
+            statusVisible
+              ? "max-h-5 translate-y-0 opacity-100"
+              : "pointer-events-none max-h-0 -translate-y-1 opacity-0"
+          }`}
+          aria-hidden={!statusVisible}
+        >
           <span className="text-xs text-neutral-400">
             {note.length}/2000
           </span>
