@@ -131,7 +131,9 @@ export default function DayDetail({ date, entry, onChange, imageDirection = "lef
     setStatusVisible(false);
     setError(null);
     setInfo(null);
-  }, [date, entry?.note]);
+    // 仅当切换日期时重置状态栏显示；保存成功引起的 entry.note 更新不应重置
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date]);
 
   useEffect(() => {
     if (!entry) return;
