@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#78350f"/>
+  <!-- Film strip left -->
+  <rect x="48" y="48" width="28" height="416" rx="8" fill="#fef3c7"/>
+  <!-- Film strip right -->
+  <rect x="436" y="48" width="28" height="416" rx="8" fill="#fef3c7"/>
+  <!-- Film holes left -->
+  <rect x="56" y="80" width="12" height="20" rx="3" fill="#78350f"/>
+  <rect x="56" y="130" width="12" height="20" rx="3" fill="#78350f"/>
+  <rect x="56" y="180" width="12" height="20" rx="3" fill="#78350f"/>
+  <rect x="56" y="230" width="12" height="20" rx="3" fill="#78350f"/>
+  <rect x="56" y="280" width="12" height="20" rx="3" fill="#78350f"/>
+  <rect x="56" y="330" width="12" height="20" rx="3" fill="#78350f"/>
+  <rect x="56" y="380" width="12" height="20" rx="3" fill="#78350f"/>
+  <!-- Film holes right -->
+  <rect x="444" y="80" width="12" height="20" rx="3" fill="#78350f"/>
+  <rect x="444" y="130" width="12" height="20" rx="3" fill="#78350f"/>
+  <rect x="444" y="180" width="12" height="20" rx="3" fill="#78350f"/>
+  <rect x="444" y="230" width="12" height="20" rx="3" fill="#78350f"/>
+  <rect x="444" y="280" width="12" height="20" rx="3" fill="#78350f"/>
+  <rect x="444" y="330" width="12" height="20" rx="3" fill="#78350f"/>
+  <rect x="444" y="380" width="12" height="20" rx="3" fill="#78350f"/>
+  <!-- Photo frame -->
+  <rect x="96" y="120" width="320" height="220" rx="12" fill="#fef3c7"/>
+  <!-- Mountain scene -->
+  <rect x="96" y="120" width="320" height="220" rx="12" fill="#bfdbfe"/>
+  <!-- Sky gradient simulation -->
+  <rect x="96" y="120" width="320" height="130" rx="12" fill="#7dd3fc"/>
+  <!-- Mountains -->
+  <polygon points="256,160 340,280 172,280" fill="#d97706"/>
+  <polygon points="180,200 260,280 100,280" fill="#b45309"/>
+  <polygon points="330,190 400,280 260,280" fill="#92400e"/>
+  <!-- Snow cap -->
+  <polygon points="256,160 275,185 237,185" fill="#fef3c7"/>
+  <!-- Ground -->
+  <rect x="96" y="280" width="320" height="60" rx="0" fill="#a16207"/>
+  <!-- Bottom rounded corners fix -->
+  <rect x="96" y="300" width="320" height="40" rx="0" fill="#a16207"/>
+  <rect x="96" y="316" width="320" height="24" rx="0" fill="#a16207"/>
+  <path d="M96 316 h320 v16 q0 8 -12 8 H108 q-12 0 -12 -8 z" fill="#a16207"/>
+  <!-- Letter S -->
+  <text x="256" y="430" font-family="Georgia, serif" font-size="72" font-weight="bold" text-anchor="middle" fill="#fef3c7" opacity="0.9">S</text>
+</svg>
