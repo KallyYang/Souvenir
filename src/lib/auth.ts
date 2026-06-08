@@ -38,3 +38,13 @@ export async function getAppPassword(): Promise<string> {
   }
   return password;
 }
+
+/**
+ * 判断是否启用应用内的密码鉴权模块。
+ * 当部署环境未配置 APP_PASSWORD 时，依赖外部（如 Cloudflare）鉴权，
+ * 应用自身不再做密码校验。
+ */
+export async function isPasswordAuthEnabled(): Promise<boolean> {
+  const password = await getCloudflareVarAsync("APP_PASSWORD");
+  return typeof password === "string" && password.length > 0;
+}

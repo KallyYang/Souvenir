@@ -5,10 +5,16 @@ import {
   SESSION_MAX_AGE,
   createSessionToken,
   getAppPassword,
+  isPasswordAuthEnabled,
 } from "@/lib/auth";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export async function POST(request: Request) {
+  // 未配置 APP_PASSWORD：应用内密码鉴权模块禁用，直接放行。
+  if (!(await isPasswordAuthEnabled())) {
+    return NextResponse.json({ ok: true, disabled: true });
+  }
+
   let body: { password?: string };
   try {
     body = await request.json();

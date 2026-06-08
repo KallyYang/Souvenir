@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
+import {
+  SESSION_COOKIE,
+  isPasswordAuthEnabled,
+  verifySessionToken,
+} from "@/lib/auth";
 
 export const config = {
   matcher: [
@@ -13,6 +17,18 @@ const PUBLIC_API_PATHS = ["/api/login"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // 未配置 APP_PASSWORD 时，认为外部（如 Cloudflare）已完成鉴权，
+  // 跳过应用自身的密码鉴权流程。
+  if (!(await isPasswordAuthEnabled())) {
+    if (pathname === "/login" || pathname.startsWith("/login/")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      url.searchParams.delete("from");
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
 
   if (
     PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
