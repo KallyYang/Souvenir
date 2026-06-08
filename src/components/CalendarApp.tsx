@@ -17,7 +17,11 @@ import FlipDate from "./FlipDate";
 
 type EntriesMap = Record<string, MemoryEntry>;
 
-export default function CalendarApp() {
+export default function CalendarApp({
+  showLogout = true,
+}: {
+  showLogout?: boolean;
+}) {
   const router = useRouter();
   const today = useMemo(() => new Date(), []);
   const [monthAnchor, setMonthAnchor] = useState<Date>(() => {
@@ -116,12 +120,14 @@ export default function CalendarApp() {
             每一天，一张图片，一段故事
           </p>
         </div>
-        <button
-          onClick={handleLogout}
-          className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-sm transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800 sm:text-sm"
-        >
-          退出
-        </button>
+        {showLogout && (
+          <button
+            onClick={handleLogout}
+            className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-sm transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800 sm:text-sm"
+          >
+            退出
+          </button>
+        )}
       </header>
 
       <div className="flex flex-1 flex-col gap-4 lg:flex-row lg:gap-6">
